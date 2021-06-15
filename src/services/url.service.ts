@@ -34,8 +34,52 @@ export class UrlService {
         }
     }
 
+
     async findByCode( code: string ): Promise<Url> {
         let url = await this.urlModel.findOne({ urlCode: code });
         return url;
+    }
+
+    async getPopularUrls() {
+        const ONE_DAY = 86_400_000;
+        const endDate = Date.now();
+        const startDate = endDate - ONE_DAY;
+  
+        const aggregationPipeline = [
+            {
+              '$match': {
+                'date': {
+                  '$gte': new Date(startDate), 
+                  '$lte': new Date(endDate)
+                }
+              }
+            }, {
+              '$group': {
+                '_id': {
+                  'longBaseUrl': '$longBaseUrl', 
+                  'dayOfTheMonth': {
+                    '$dayOfMonth': '$date'
+                  }
+                }, 
+                'count': {
+                  '$sum': 1
+                }
+              }
+            }, {
+              '$project': {
+                '_id': 0, 
+                'longBaseUrl': '$_id.longBaseUrl', 
+                'dayOfTheMonth': '$_id.dayOfTheMonth', 
+                'count': '$count'
+              }
+            }, {
+              '$sort': {
+                'count': 1
+              }
+            }
+          ]
+
+        const popularAggregation = await this.urlModel.aggregate(aggregationPipeline);
+        return popularAggregation;
     }
 }

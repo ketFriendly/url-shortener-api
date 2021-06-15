@@ -22,7 +22,8 @@ export class UrlController {
             try {
                 const shortenedUrl = await this.urlService.shortrenUrl(longUrl, baseUrl);
                 return res.json(shortenedUrl);
-            } catch (error) {
+            } catch (err) {
+                console.error(err);
                 res.status(HttpStatus.INTERNAL_SERVER_ERROR).json('Server error.')
             }
         }
@@ -37,6 +38,20 @@ export class UrlController {
             } else {
                 return res.status(HttpStatus.NOT_FOUND).json('No url found');
             }
+        } catch (err) {
+            console.error(err);
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json('Server error');
+        }
+    }
+
+    @Get('url/admin')
+    async getMostPopularUrls(@Req()req: Request, @Res() res: Response) {
+        try{
+            const popularUrls = await this.urlService.getPopularUrls();
+            if(_.isEmpty(popularUrls)){
+                return res.status(HttpStatus.NOT_FOUND).json('No urls found');
+            }
+            return res.json(popularUrls)
         } catch (err) {
             console.error(err);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json('Server error');
