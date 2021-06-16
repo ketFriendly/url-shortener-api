@@ -74,7 +74,7 @@ export class UrlService {
               }
             }, {
               '$sort': {
-                'count': 1
+                'count': -1
               }
             }
           ]
