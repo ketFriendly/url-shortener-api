@@ -5,6 +5,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { customAlphabet } from 'nanoid/async';
 import * as _ from 'lodash';
 import * as UrlParse from 'url-parse';
+import { PopularUrlDataDTO } from "src/dtos/popular-url.dto";
+import { plainToClass } from "class-transformer";
+
 
 @Injectable()
 export class UrlService {
@@ -36,11 +39,11 @@ export class UrlService {
 
 
     async findByCode( code: string ): Promise<Url> {
-        let url = await this.urlModel.findOne({ urlCode: code });
+        const url = await this.urlModel.findOne({ urlCode: code });
         return url;
     }
 
-    async getPopularUrls() {
+    async getPopularUrls() : Promise<PopularUrlDataDTO[]>{
         const ONE_DAY = 86_400_000;
         const endDate = Date.now();
         const startDate = endDate - ONE_DAY;
@@ -80,6 +83,8 @@ export class UrlService {
           ]
 
         const popularAggregation = await this.urlModel.aggregate(aggregationPipeline);
-        return popularAggregation;
+        const dtos = popularAggregation.map(popular => plainToClass(PopularUrlDataDTO,popular));
+        
+        return dtos;
     }
 }

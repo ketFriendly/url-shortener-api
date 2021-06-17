@@ -1,68 +1,62 @@
-import { Controller, Get, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, Post, UnauthorizedException, UseFilters } from '@nestjs/common';
 import { UrlService } from '../services/url.service';
-import { Request, Response } from 'express';
 import * as validUrl from 'valid-url';
 import * as _ from 'lodash';
-import * as UrlParse from 'url-parse';
+import { HttpExceptionFilter } from '../exception_filters/http-exception.filter';
+import { UrlDataDTO } from 'src/dtos/url.dto';
+import { CodeDTO } from 'src/dtos/code.dto';
+import { Url } from '../models/url.model';
+import { PopularUrlDataDTO } from 'src/dtos/popular-url.dto';
+
 
 
 @Controller('api')
+
+@UseFilters(HttpExceptionFilter)
 export class UrlController {
     constructor(private readonly urlService: UrlService) { }
 
     @Post('/url/shorten')
-    async getShortUrl(@Req() req: Request, @Res() res: Response) {
-        const { longUrl } = req.body;
+    async getShortUrl(@Body() longUrl: UrlDataDTO): Promise<Url> {
         const baseUrl = process.env.BASE_URL;
-        const parsed = new UrlParse(longUrl);
 
         if (!validUrl.isUri(baseUrl)) {
-            return res.status(HttpStatus.UNAUTHORIZED).json('Invalid base url')
+            throw new UnauthorizedException("Invalid base url")
         }
-        else if (!validUrl.isUri(longUrl)) {
-            return res.status(HttpStatus.BAD_REQUEST).json('Invalid long url')
-        } 
-        else if (parsed.pathname.length < 9) {
-            return res.status(HttpStatus.BAD_REQUEST).json('URL too short')
-        }
-        else {
-            try {
-                const shortenedUrl = await this.urlService.shortrenUrl(longUrl, baseUrl);
-                return res.json(shortenedUrl);
-            } catch (err) {
-                console.error(err);
-                res.status(HttpStatus.INTERNAL_SERVER_ERROR).json('Server error.')
-            }
+        try {
+            const shortenedUrl = await this.urlService.shortrenUrl(longUrl.longUrl, baseUrl);
+            return shortenedUrl;
+        } catch (err) {
+            return err;
         }
     }
 
     @Get(':code')
-    async redirectToLongURL(@Req() req: Request, @Res() res: Response) {
+    async redirectToLongURL(@Param() codeDto: CodeDTO): Promise<Url> {
         try {
-            const url = await this.urlService.findByCode(req.params.code);
+            const url = await this.urlService.findByCode(codeDto.code);
             if (!_.isEmpty(url)) {
-                //return res.redirect(HttpStatus.FOUND, url.longUrl);
-                return res.json(url);
+                return url;
             } else {
-                return res.status(HttpStatus.NOT_FOUND).json('No url found');
+                throw new NotFoundException('No url found')
             }
         } catch (err) {
-            console.error(err);
-            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json('Server error');
+            console.error(err)
+            return err;
         }
     }
 
     @Get('url/admin')
-    async getMostPopularUrls(@Req()req: Request, @Res() res: Response) {
-        try{
+    async getMostPopularUrls(): Promise<PopularUrlDataDTO[]> {
+        try {
             const popularUrls = await this.urlService.getPopularUrls();
-            if(_.isEmpty(popularUrls)){
-                return res.status(HttpStatus.NOT_FOUND).json('No urls found');
+            if (_.isEmpty(popularUrls)) {
+                throw new NotFoundException('No urls found');
             }
-            return res.json(popularUrls)
+            return popularUrls
         } catch (err) {
-            console.error(err);
-            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json('Server error');
+            return err;
         }
     }
 }
+   
