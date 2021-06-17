@@ -1,6 +1,8 @@
 # INTRO
 
 This URL shortening app was created using node.js and nestJS. The database is MongoDB and the ORM used is mongoose.
+>
+On the `main` branch you can find the first code draft and on the `http-branch` you can find the code that implements global HTTP filters. 
 
 # USAGE
 
